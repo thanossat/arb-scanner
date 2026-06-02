@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Arb Scanner</title>
+<style>
+:root {
+  --bg:#0f0f0f; --bg2:#1a1a1a; --bg3:#222;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+  --text:#f0f0f0; --text2:#999; --text3:#555;
+  --green:#4ade80; --green-bg:rgba(74,222,128,0.1);
+  --red:#f87171;   --red-bg:rgba(248,113,113,0.1);
+  --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.1);
+  --blue:#60a5fa;  --blue-bg:rgba(96,165,250,0.1);
+  --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+  background:#111;color:var(--text);font-size:14px;min-height:100vh;padding-bottom:4rem}
+.page-wrap{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh}
+
+header{padding:1rem 1rem 0.75rem;border-bottom:0.5px solid var(--border);
+  display:flex;align-items:center;gap:10px;position:sticky;top:0;
+  background:var(--bg);z-index:10}
+.logo{width:32px;height:32px;background:var(--green-bg);border:0.5px solid var(--border2);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+header h1{font-size:16px;font-weight:600}
+header .sub{font-size:12px;color:var(--text2)}
+.header-scan{margin-left:auto}
+
+.content{padding:0.75rem 1rem}
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:0.875rem 1rem;margin-bottom:0.625rem}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;
+  color:var(--text2);margin-bottom:0.75rem}
+
+.field-row{display:flex;align-items:center;gap:8px;margin-bottom:0.5rem}
+.field-row:last-child{margin-bottom:0}
+.field-row label{font-size:13px;color:var(--text2);min-width:130px;flex-shrink:0}
+input[type=number],input[type=text],select{
+  background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-size:13px;padding:7px 10px;outline:none;transition:border-color .15s;
+  -webkit-appearance:none}
+input:focus,select:focus{border-color:var(--blue)}
+.setup-inputs{display:flex;gap:8px;align-items:center}
+.setup-inputs input{width:80px}
+.unit{font-size:12px;color:var(--text2)}
+
+/* ── Match list ── */
+.league-header{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text3);padding:6px 0 6px;border-bottom:0.5px solid var(--border);margin-bottom:6px}
+.match-card{background:var(--bg2);border:0.5px solid var(--border);
+  border-radius:var(--radius);margin-bottom:6px;overflow:hidden;transition:border-color .15s}
+.match-card.has-arb{border-color:rgba(74,222,128,.3)}
+.match-header{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;cursor:pointer}
+.match-header:active{background:var(--bg3)}
+.match-teams{font-size:14px;font-weight:600}
+.match-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.match-right{display:flex;align-items:center;gap:8px}
+.chevron{font-size:12px;color:var(--text3);transition:transform .2s}
+.match-card.open .chevron{transform:rotate(180deg)}
+
+/* status badges */
+.status-badge{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-radius:var(--radius);font-size:13px;font-weight:500;margin-bottom:0.625rem}
+.status-badge.arb{background:var(--green-bg);color:var(--green);border:0.5px solid rgba(74,222,128,.3)}
+.status-badge.partial{background:var(--amber-bg);color:var(--amber);border:0.5px solid rgba(251,191,36,.3)}
+.status-badge.noarb{background:var(--red-bg);color:var(--red);border:0.5px solid rgba(248,113,113,.3)}
+
+/* pill */
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600}
+.pill-green{background:var(--green-bg);color:var(--green);border:0.5px solid rgba(74,222,128,.3)}
+.pill-amber{background:var(--amber-bg);color:var(--amber);border:0.5px solid rgba(251,191,36,.3)}
+.pill-red  {background:var(--red-bg);  color:var(--red);  border:0.5px solid rgba(248,113,113,.3)}
+.pill-gray {background:var(--bg3);     color:var(--text2);border:0.5px solid var(--border2)}
+
+/* ── Match detail ── */
+.match-detail{display:none;padding:0 14px 14px;border-top:0.5px solid var(--border)}
+.match-card.open .match-detail{display:block}
+
+/* metrics grid */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 8px}
+.metric-card{background:var(--bg);border:0.5px solid var(--border);
+  border-radius:var(--radius);padding:0.75rem}
+.metric-card .mlabel{font-size:11px;color:var(--text2);margin-bottom:4px}
+.metric-card .mvalue{font-size:20px;font-weight:600}
+.metric-card.green{border-color:rgba(74,222,128,.3);background:var(--green-bg)}
+.metric-card.green .mvalue{color:var(--green)}
+.metric-card.red{border-color:rgba(248,113,113,.3);background:var(--red-bg)}
+.metric-card.red .mvalue{color:var(--red)}
+.metric-card.amber{border-color:rgba(251,191,36,.3);background:var(--amber-bg)}
+.metric-card.amber .mvalue{color:var(--amber)}
+
+/* legs table */
+.legs-header{display:grid;grid-template-columns:1fr 80px 70px;gap:6px;margin-bottom:4px}
+.legs-header span{font-size:11px;color:var(--text3);font-weight:500;
+  text-transform:uppercase;letter-spacing:.04em;padding:0 2px}
+.leg-row{display:grid;grid-template-columns:1fr 80px 70px;gap:6px;
+  align-items:center;margin-bottom:4px}
+.leg-left{display:flex;flex-direction:column;gap:3px}
+.leg-label{font-size:13px;font-weight:600;color:var(--text)}
+.leg-book{font-size:11px;color:var(--blue)}
+.leg-odds-val{font-size:16px;font-weight:700;text-align:center;
+  background:var(--bg3);border-radius:var(--radius-sm);padding:6px 4px;color:var(--text)}
+.leg-stake-val{font-size:13px;font-weight:600;text-align:right;padding-right:4px;color:var(--text2)}
+.leg-stake-val.kl-active{color:var(--amber)}
+
+/* KL toggle row */
+.kl-toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 2px;border-top:0.5px solid var(--border);margin-top:4px}
+.kl-label{font-size:12px;color:var(--text)}
+.kl-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--bg3);
+  border:0.5px solid var(--border2);border-radius:11px;cursor:pointer;transition:background .2s}
+.toggle-track::after{content:'';position:absolute;width:16px;height:16px;
+  background:var(--text2);border-radius:50%;top:2px;left:2px;transition:transform .2s,background .2s}
+.toggle-switch input:checked+.toggle-track{background:var(--amber-bg);border-color:var(--amber)}
+.toggle-switch input:checked+.toggle-track::after{transform:translateX(18px);background:var(--amber)}
+
+/* results table */
+.results-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.results-table th{text-align:left;color:var(--text3);font-weight:500;padding:4px 6px;
+  border-bottom:0.5px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.results-table td{padding:7px 6px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+.results-table tr:last-child td{border-bottom:none}
+.net-pos{color:var(--green);font-weight:600}
+.net-neg{color:var(--red)}
+.net-warn{color:var(--amber);font-weight:600}
+.type-pill{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500}
+.type-auto{background:var(--bg3);color:var(--text2)}
+.type-kl{background:var(--amber-bg);color:var(--amber)}
+
+/* buttons */
+.btn{padding:11px 8px;border-radius:var(--radius);font-size:13px;font-weight:600;
+  cursor:pointer;border:none;text-align:center;transition:opacity .15s}
+.btn:active{opacity:.75}
+.btn-green{background:var(--green-bg);color:var(--green);border:0.5px solid rgba(74,222,128,.4)}
+.btn-scan{background:var(--blue-bg);color:var(--blue);border:0.5px solid rgba(96,165,250,.4);
+  padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;transition:opacity .15s}
+.btn-scan:active{opacity:.7}
+.btn-scan:disabled{opacity:.4;cursor:not-allowed}
+
+/* loading */
+.loading-card{background:var(--bg2);border:0.5px solid var(--border);
+  border-radius:var(--radius);padding:14px;margin-bottom:6px;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.9}}
+.loading-line{height:13px;background:var(--bg3);border-radius:4px}
+
+/* toast */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);
+  padding:10px 18px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;
+  pointer-events:none;z-index:200;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(74,222,128,.5);color:var(--green)}
+.toast.err{border-color:rgba(248,113,113,.5);color:var(--red)}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .big{font-size:28px;margin-bottom:8px}
+.footnote{font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<header>
+  <div class="logo">⚡</div>
+  <div>
+    <h1>Arb Scanner</h1>
+    <div class="sub" id="lastScan">3-way arbitrage</div>
+  </div>
+  <button class="btn-scan header-scan" id="scanBtn" onclick="startScan()">⟳ Scan</button>
+</header>
+
+<div class="content">
+
+  <!-- SETUP -->
+  <div class="card">
+    <div class="card-title">Ρυθμίσεις</div>
+    <div class="field-row">
+      <label>Proxy URL</label>
+      <input type="text" id="proxyUrl"
+        value="https://zefksis.wasmer.app/wp-content/uploads/scanner/arb-proxy.php"
+        style="width:100%;font-size:11px">
+    </div>
+    <div class="field-row">
+      <label>Συνολικό ποντάρισμα</label>
+      <div class="setup-inputs">
+        <span class="unit">€</span>
+        <input type="number" id="totalStake" value="100" min="1" step="10"
+          oninput="refreshAllCalcs()">
+      </div>
+    </div>
+    <div class="field-row">
+      <label>% γνωστής απώλειας</label>
+      <div class="setup-inputs">
+        <input type="number" id="lossPercent" value="20" min="1" max="99" step="1"
+          style="width:60px" oninput="refreshAllCalcs()">
+        <span class="unit">%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match list -->
+  <div id="matchList"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY    = () => document.getElementById('proxyUrl').value.trim();
+const getTotal = () => parseFloat(document.getElementById('totalStake').value) || 0;
+const getLossP = () => (parseFloat(document.getElementById('lossPercent').value) || 20) / 100;
+
+// scanData: αποθηκεύει τα αποτελέσματα για re-render
+let scanData = [];
+// klState: { rid: [false, false, false] }
+let klState  = {};
+
+// ── Scan ──────────────────────────────────────────────────────
+async function startScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = '⟳ …';
+  document.getElementById('matchList').innerHTML = skeleton(5);
+  scanData = []; klState = {};
+
+  try {
+    const evRes = await fetch(`${PROXY()}?endpoint=events`);
+    if (!evRes.ok) throw new Error(`HTTP ${evRes.status}`);
+    const ev = await evRes.json();
+    if (!ev.matches?.length) {
+      document.getElementById('matchList').innerHTML =
+        '<div class="empty-state"><div class="big">📭</div>Δεν βρέθηκαν αγώνες σήμερα</div>';
+      return;
+    }
+
+    // Φόρτωσε odds σε batches of 4
+    const results = [];
+    for (let i = 0; i < ev.matches.length; i += 4) {
+      const batch = ev.matches.slice(i, i + 4);
+      const bRes = await Promise.all(batch.map(m =>
+        fetch(`${PROXY()}?endpoint=odds&rid=${m.rid}`)
+          .then(r => r.json())
+          .then(d => ({ ...m, ...d }))
+          .catch(() => ({ ...m, error: true }))
+      ));
+      results.push(...bRes);
+    }
+
+    scanData = results;
+    // Αρχικοποίηση klState
+    for (const m of results) klState[m.rid] = [false, false, false];
+
+    renderAll();
+    document.getElementById('lastScan').textContent =
+      'Scan: ' + new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) {
+    document.getElementById('matchList').innerHTML =
+      `<div class="empty-state"><div class="big">⚠️</div>${e.message}</div>`;
+    toast('Σφάλμα: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '⟳ Scan';
+  }
+}
+
+// ── Render all matches ────────────────────────────────────────
+function renderAll() {
+  if (!scanData.length) return;
+
+  // Group by league
+  const leagues = {};
+  for (const m of scanData) {
+    if (!leagues[m.league]) leagues[m.league] = [];
+    leagues[m.league].push(m);
+  }
+
+  // Remember open cards
+  const open = new Set(
+    [...document.querySelectorAll('.match-card.open')].map(el => el.dataset.rid)
+  );
+
+  let html = '';
+  for (const [league, matches] of Object.entries(leagues)) {
+    html += `<div class="league-header">${esc(league)}</div>`;
+    for (const m of matches) html += renderCard(m);
+  }
+  document.getElementById('matchList').innerHTML = html;
+
+  // Restore open state
+  for (const rid of open) {
+    document.getElementById(`card-${rid}`)?.classList.add('open');
+  }
+}
+
+// ── Render single match card ──────────────────────────────────
+function renderCard(m) {
+  if (m.error) return '';
+
+  const analysis  = m.analysis || {};
+  const bestOdds  = analysis.best_odds || {};
+  const eeepa     = m.eeepa_books || {};
+  const kl        = klState[m.rid] || [false, false, false];
+
+  const hO = bestOdds.H?.odds || 0;
+  const xO = bestOdds.X?.odds || 0;
+  const aO = bestOdds.A?.odds || 0;
+  const hB = bestOdds.H?.book || '—';
+  const xB = bestOdds.X?.book || '—';
+  const aB = bestOdds.A?.book || '—';
+
+  // ── Stake calculation (ίδια λογική με index.html) ──
+  const total = getTotal(), lp = getLossP();
+  const oddsArr = [hO, xO, aO];
+  const valid   = oddsArr.every(o => o > 1);
+
+  // klStake: αν kl=true → (total*(1-lp))/odds
+  const fixedArr = oddsArr.map((o, i) => kl[i] && o > 1 ? (total * (1 - lp)) / o : null);
+  const fixedSum = fixedArr.reduce((a, v) => a + (v !== null ? v : 0), 0);
+  const implArr  = oddsArr.map(o => o > 1 ? 1/o : 0);
+  const freeImpl = implArr.reduce((a, v, i) => a + (fixedArr[i] === null ? v : 0), 0);
+  const freeTotal = Math.max(0, total - fixedSum);
+  const stakes   = fixedArr.map((v, i) =>
+    v !== null ? v : (freeImpl > 0 ? (implArr[i] / freeImpl) * freeTotal : 0)
+  );
+
+  const sumImpl  = implArr.reduce((a, b) => a + b, 0);
+  const totalSt  = stakes.reduce((a, b) => a + b, 0);
+  const returns  = stakes.map((s, i) => s * oddsArr[i]);
+  const nets     = returns.map(r => r - totalSt);
+  const minNet   = valid ? Math.min(...nets) : 0;
+  const maxNet   = valid ? Math.max(...nets) : 0;
+  const isArb    = minNet > -0.01;
+  const klCount  = kl.filter(Boolean).length;
+
+  // ── Status pill (header) ──
+  let headerPill;
+  if (!valid) {
+    headerPill = '<span class="pill pill-gray">—</span>';
+  } else if (analysis.true_arb) {
+    headerPill = '<span class="pill pill-green">✓ ARB</span>';
+  } else if (klCount > 0) {
+    headerPill = '<span class="pill pill-amber">⚡ ΕΝ ΓΝΩΣΕΙ</span>';
+  } else {
+    headerPill = `<span class="pill pill-red">${(sumImpl*100).toFixed(1)}%</span>`;
+  }
+
+  // ── 3 legs ──
+  const legs = [
+    { label: '1', outcome: 'H', book: hB, odds: hO, stake: stakes[0], net: nets[0], kl: kl[0], idx: 0 },
+    { label: 'X', outcome: 'X', book: xB, odds: xO, stake: stakes[1], net: nets[1], kl: kl[1], idx: 1 },
+    { label: '2', outcome: 'A', book: aB, odds: aO, stake: stakes[2], net: nets[2], kl: kl[2], idx: 2 },
+  ];
+
+  let legsHtml = `<div class="legs-header">
+    <span>Αποτέλεσμα / Book</span><span>Απόδοση</span><span>Ποντ.</span>
+  </div>`;
+
+  for (const leg of legs) {
+    const stakeColor = leg.kl ? 'kl-active' : '';
+    const stakeStr   = valid ? `€${leg.stake.toFixed(2)}` : '—';
+    legsHtml += `<div class="leg-row">
+      <div class="leg-left">
+        <div class="leg-label">${leg.label} &nbsp;<span style="font-size:11px;font-weight:400;color:var(--text2)">${leg.outcome}</span></div>
+        <div class="leg-book">${esc(leg.book)}</div>
+      </div>
+      <div class="leg-odds-val">${leg.odds > 1 ? leg.odds.toFixed(2) : '—'}</div>
+      <div class="leg-stake-val ${stakeColor}" id="stake-${m.rid}-${leg.idx}">${stakeStr}</div>
+    </div>
+    <div class="kl-toggle-row">
+      <div>
+        <div class="kl-label">${leg.label} — εν γνώσει</div>
+        <div class="kl-sub">-<span class="kl-pct-${m.rid}">${Math.round(lp*100)}</span>% αν κερδίσει</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--amber);display:${leg.kl?'':'none'}"
+          id="klamt-${m.rid}-${leg.idx}">€${leg.stake.toFixed(2)}</span>
+        <label class="toggle-switch">
+          <input type="checkbox" ${leg.kl?'checked':''}
+            onchange="toggleKL('${m.rid}', ${leg.idx}, this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>`;
+  }
+
+  // ── Metrics ──
+  let metricsHtml = '';
+  let badgeHtml   = '';
+  let tableHtml   = '';
+  let footnote    = '';
+
+  if (valid) {
+    metricsHtml = `<div class="metrics">
+      <div class="metric-card"><div class="mlabel">Implied συνολικά</div>
+        <div class="mvalue" style="font-size:18px" id="impl-${m.rid}">${(sumImpl*100).toFixed(2)}%</div></div>
+      <div class="metric-card"><div class="mlabel">Margin</div>
+        <div class="mvalue" style="font-size:18px">${((sumImpl-1)*100).toFixed(2)}%</div></div>
+      <div class="metric-card ${maxNet>=-0.01?'green':'red'}">
+        <div class="mlabel">Καλύτερο</div>
+        <div class="mvalue" id="maxnet-${m.rid}">${maxNet>=0?'+':''}€${maxNet.toFixed(2)}</div></div>
+      <div class="metric-card ${minNet>=-0.01?'green':klCount>0?'amber':'red'}">
+        <div class="mlabel">Χειρότερο</div>
+        <div class="mvalue" id="minnet-${m.rid}">${minNet>=0?'+':''}€${minNet.toFixed(2)}</div></div>
+    </div>`;
+
+    badgeHtml = isArb
+      ? '<div class="status-badge arb">✓ Arb — κέρδος εγγυημένο</div>'
+      : klCount > 0
+      ? `<div class="status-badge partial">⚡ Ελεγχόμενη έκθεση — ${klCount} σημείο${klCount>1?'α':''} εν γνώσει</div>`
+      : '<div class="status-badge noarb">✕ Δεν υπάρχει arb</div>';
+
+    tableHtml = `<table class="results-table"><thead><tr>
+      <th>Σημείο</th><th>Book</th><th>Απόδ.</th><th>Ποντ.</th><th>Net P/L</th><th>Τύπος</th>
+    </tr></thead><tbody>`;
+    for (const leg of legs) {
+      const nc   = leg.kl ? 'net-warn' : leg.net >= -0.01 ? 'net-pos' : 'net-neg';
+      const pill = leg.kl
+        ? `<span class="type-pill type-kl">-${Math.round(lp*100)}%</span>`
+        : `<span class="type-pill type-auto">auto</span>`;
+      tableHtml += `<tr>
+        <td><strong>${leg.label}</strong></td>
+        <td style="color:var(--text2)">${esc(leg.book)}</td>
+        <td style="font-weight:600">${leg.odds.toFixed(2)}</td>
+        <td style="font-weight:600">€${leg.stake.toFixed(2)}</td>
+        <td class="${nc}">${leg.net>=0?'+':''}€${leg.net.toFixed(2)}</td>
+        <td>${pill}</td>
+      </tr>`;
+    }
+    tableHtml += '</tbody></table>';
+
+    const books = [...new Set([hB,xB,aB].filter(b=>b&&b!=='—'))];
+    footnote = isArb
+      ? (books.length >= 2 ? `Multi-book arb: ${books.join(', ')}.` : 'Προσοχή: ίδιο book παντού.')
+      : klCount > 0
+      ? `Σημεία "εν γνώσει" → ζημιά ακριβώς -${Math.round(lp*100)}% (€${(total*lp).toFixed(2)}) αν κερδίσουν.`
+      : 'Δεν υπάρχει arb με τα τρέχοντα odds.';
+  }
+
+  return `<div class="match-card ${isArb?'has-arb':''}" id="card-${m.rid}" data-rid="${m.rid}">
+    <div class="match-header" onclick="toggleCard('${m.rid}')">
+      <div>
+        <div class="match-teams">${esc(m.home)} <span style="color:var(--text3)">vs</span> ${esc(m.away)}</div>
+        <div class="match-meta">${esc(m.league)} · ${m.all_books_count||'?'} books · ${Object.keys(eeepa).length} ΕΕΕΠ</div>
+      </div>
+      <div class="match-right">${headerPill}<span class="chevron">▾</span></div>
+    </div>
+    <div class="match-detail" id="detail-${m.rid}">
+      ${legsHtml}
+      ${metricsHtml}
+      ${badgeHtml}
+      ${tableHtml}
+      ${footnote ? `<p class="footnote">${footnote}</p>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── KL toggle ─────────────────────────────────────────────────
+function toggleKL(rid, idx, checked) {
+  if (!klState[rid]) klState[rid] = [false, false, false];
+  klState[rid][idx] = checked;
+  // Re-render μόνο αυτό το card (χωρίς να χάσουμε open state)
+  const m = scanData.find(x => x.rid === rid);
+  if (!m) return;
+  const card = document.getElementById(`card-${rid}`);
+  const wasOpen = card?.classList.contains('open');
+  const newHtml = renderCard(m);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = newHtml;
+  const newCard = tmp.firstChild;
+  if (wasOpen) newCard.classList.add('open');
+  card.replaceWith(newCard);
+}
+
+// ── Refresh όλων των calculations (αλλαγή stake/loss%) ────────
+function refreshAllCalcs() {
+  if (!scanData.length) return;
+  // Re-render όλα τα cards διατηρώντας open state
+  renderAll();
+  // Update kl-pct spans
+  document.querySelectorAll('[class^="kl-pct-"]').forEach(el => {
+    el.textContent = Math.round(getLossP() * 100);
+  });
+}
+
+// ── Toggle card open/close ────────────────────────────────────
+function toggleCard(rid) {
+  document.getElementById(`card-${rid}`)?.classList.toggle('open');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function skeleton(n) {
+  return Array.from({length:n}, () =>
+    `<div class="loading-card">
+      <div class="loading-line" style="width:55%;margin-bottom:8px"></div>
+      <div class="loading-line" style="width:35%"></div>
+    </div>`
+  ).join('');
+}
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
