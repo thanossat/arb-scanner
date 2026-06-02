@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arb Scanner</title>
+<style>
+  :root {
+    --bg:     #0d0f12;
+    --bg2:    #141720;
+    --bg3:    #1c2030;
+    --bg4:    #232840;
+    --border: rgba(255,255,255,0.07);
+    --border2:rgba(255,255,255,0.13);
+    --text:   #e8eaf0;
+    --text2:  #8b90a0;
+    --text3:  #555a6e;
+    --green:  #2ecc8a;
+    --green2: #1a7a52;
+    --amber:  #f5a623;
+    --amber2: #7a4e0a;
+    --red:    #e25555;
+    --blue:   #4a9eff;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg2);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #000;
+  }
+  .logo h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo span { font-size: 12px; color: var(--text2); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  /* ── Config bar ── */
+  .config-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 20px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .config-bar label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .config-bar input[type=number] {
+    width: 70px; padding: 6px 8px;
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-size: 13px; outline: none;
+  }
+  .config-bar input:focus { border-color: var(--green); }
+  .sep { width: 0.5px; height: 20px; background: var(--border2); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 7px 14px; border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border2);
+    background: var(--bg3); color: var(--text);
+    font-size: 13px; cursor: pointer;
+    transition: all .15s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg4); border-color: var(--border2); }
+  .btn:active { transform: scale(.97); }
+  .btn-green {
+    background: var(--green); color: #000;
+    border-color: var(--green); font-weight: 600;
+  }
+  .btn-green:hover { background: #29b87d; }
+  .btn-green:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* ── Status pill ── */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: .3px;
+  }
+  .pill-green  { background: rgba(46,204,138,.15); color: var(--green);  border: 0.5px solid rgba(46,204,138,.3); }
+  .pill-amber  { background: rgba(245,166,35,.15);  color: var(--amber);  border: 0.5px solid rgba(245,166,35,.3); }
+  .pill-gray   { background: rgba(255,255,255,.06); color: var(--text2);  border: 0.5px solid var(--border2); }
+  .pill-blue   { background: rgba(74,158,255,.15);  color: var(--blue);   border: 0.5px solid rgba(74,158,255,.3); }
+
+  /* ── Content ── */
+  .content { padding: 16px 20px; max-width: 820px; margin: 0 auto; }
+
+  /* ── League group ── */
+  .league-group { margin-bottom: 20px; }
+  .league-header {
+    font-size: 11px; font-weight: 600; letter-spacing: .8px;
+    color: var(--text3); text-transform: uppercase;
+    padding: 4px 0 8px; border-bottom: 0.5px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  /* ── Match card ── */
+  .match-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+    overflow: hidden;
+    transition: border-color .15s;
+  }
+  .match-card:hover { border-color: var(--border2); }
+  .match-card.has-dutch { border-color: rgba(46,204,138,.25); }
+  .match-card.has-dutch:hover { border-color: rgba(46,204,138,.45); }
+
+  .match-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; cursor: pointer;
+  }
+  .match-teams { font-size: 14px; font-weight: 500; }
+  .match-meta  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .match-right { display: flex; align-items: center; gap: 8px; }
+
+  .chevron {
+    width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+    color: var(--text3); transition: transform .2s;
+  }
+  .match-card.open .chevron { transform: rotate(180deg); }
+
+  /* ── Match detail ── */
+  .match-detail {
+    display: none; padding: 0 14px 14px;
+    border-top: 0.5px solid var(--border);
+  }
+  .match-card.open .match-detail { display: block; }
+
+  /* Best odds row */
+  .best-odds-row {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+    margin: 12px 0;
+  }
+  .best-odd-cell {
+    background: var(--bg3); border-radius: var(--radius-sm);
+    padding: 8px 10px; text-align: center;
+  }
+  .best-odd-cell .outcome { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .best-odd-cell .odd-val { font-size: 18px; font-weight: 600; color: var(--text); }
+  .best-odd-cell .book-name { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Combos */
+  .combos-title { font-size: 11px; color: var(--text3); margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+  .combo-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    background: var(--bg3); margin-bottom: 5px; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .combo-outcomes { font-size: 13px; font-weight: 600; min-width: 50px; }
+  .combo-books { font-size: 12px; color: var(--text2); flex: 1; }
+  .combo-implied { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .combo-edge { font-size: 12px; color: var(--green); white-space: nowrap; }
+
+  .combo-calc-btn {
+    padding: 4px 10px; border-radius: 5px; font-size: 12px;
+    background: var(--bg4); border: 0.5px solid var(--border2);
+    color: var(--text); cursor: pointer; white-space: nowrap;
+  }
+  .combo-calc-btn:hover { background: rgba(46,204,138,.15); border-color: rgba(46,204,138,.4); color: var(--green); }
+
+  /* All books table */
+  .books-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 4px;
+    margin-top: 10px;
+  }
+  .book-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 8px; border-radius: 5px; background: var(--bg3);
+    font-size: 12px;
+  }
+  .book-item .bname { color: var(--text2); }
+  .book-item .bodds { color: var(--text); font-weight: 500; }
+  .book-item.eeepa-book { border: 0.5px solid rgba(74,158,255,.25); }
+  .book-item.eeepa-book .bname { color: var(--blue); }
+
+  /* ── Calculator panel ── */
+  .calc-panel {
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: var(--radius); padding: 16px;
+    margin-bottom: 20px; display: none;
+  }
+  .calc-panel.visible { display: block; }
+  .calc-title {
+    font-size: 13px; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .calc-match-label { font-size: 12px; color: var(--text2); font-weight: 400; }
+  .calc-legs { margin-bottom: 12px; }
+  .calc-leg {
+    display: grid; grid-template-columns: 80px 1fr 80px 80px;
+    gap: 6px; margin-bottom: 6px; align-items: center;
+  }
+  .calc-leg label { font-size: 12px; color: var(--text2); }
+  .calc-leg input {
+    padding: 6px 8px; background: var(--bg3);
+    border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px; outline: none;
+  }
+  .calc-leg input:focus { border-color: var(--green); }
+  .calc-leg .stake-out {
+    padding: 6px 8px; background: var(--bg3); border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--amber); text-align: right;
+  }
+  .calc-leg .net-out {
+    padding: 6px 8px; border-radius: var(--radius-sm);
+    font-size: 13px; text-align: right; font-weight: 600;
+  }
+  .calc-total-row {
+    display: flex; gap: 10px; align-items: center; margin-top: 8px;
+  }
+  .calc-total-row label { font-size: 12px; color: var(--text2); }
+  .calc-total-row input {
+    width: 90px; padding: 6px 8px;
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none;
+  }
+  .calc-total-row input:focus { border-color: var(--green); }
+  .calc-summary {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px;
+  }
+  .calc-metric {
+    background: var(--bg3); border-radius: var(--radius-sm);
+    padding: 8px 10px; text-align: center;
+  }
+  .calc-metric .cm-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .calc-metric .cm-val { font-size: 17px; font-weight: 600; }
+
+  /* ── Empty / loading ── */
+  .empty-state {
+    text-align: center; padding: 48px 20px; color: var(--text2);
+  }
+  .empty-state .big { font-size: 32px; margin-bottom: 8px; }
+  .loading-row {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+    margin-bottom: 6px; animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: .5; } 50% { opacity: 1; }
+  }
+  .loading-line { height: 14px; background: var(--bg3); border-radius: 4px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 8px 16px;
+    font-size: 13px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok   { border-color: rgba(46,204,138,.4); color: var(--green); }
+  .toast.err  { border-color: rgba(226,85,85,.4);  color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">A</div>
+    <div>
+      <h1>Arb Scanner</h1>
+      <span id="lastScan">—</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="globalPill" class="status-pill pill-gray">—</span>
+    <button class="btn btn-green" id="scanBtn" onclick="startScan()">⟳ Scan</button>
+  </div>
+</header>
+
+<div class="config-bar">
+  <label>Proxy URL</label>
+  <input type="text" id="proxyUrl" value="https://zefksis.wasmer.app/wp-content/uploads/scanner/arb-proxy.php"
+    style="width:200px;padding:6px 8px;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;">
+  <div class="sep"></div>
+  <label>Stake €</label>
+  <input type="number" id="cfgStake" value="50" min="1" step="5">
+  <div class="sep"></div>
+  <label>Φίλτρο</label>
+  <select id="cfgFilter" style="padding:6px 8px;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;">
+    <option value="all">Όλα</option>
+    <option value="dutch_multi" selected>DUTCH MULTI μόνο</option>
+    <option value="dutch">Οποιοδήποτε DUTCH</option>
+  </select>
+  <div class="sep"></div>
+  <label>
+    <input type="checkbox" id="cfgEeepaOnly" checked style="margin-right:4px;">
+    ΕΕΕΠ μόνο
+  </label>
+</div>
+
+<!-- Calculator panel (top, auto-fill) -->
+<div class="content">
+  <div class="calc-panel" id="calcPanel">
+    <div class="calc-title">
+      <span>⚡ Calculator</span>
+      <span class="calc-match-label" id="calcMatchLabel"></span>
+    </div>
+    <div class="calc-legs" id="calcLegs"></div>
+    <div class="calc-total-row">
+      <label>Συνολικό stake €</label>
+      <input type="number" id="calcTotalStake" value="50" min="1" step="5" oninput="recalc()">
+    </div>
+    <div class="calc-summary" id="calcSummary"></div>
+  </div>
+
+  <div id="matchList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY = () => document.getElementById('proxyUrl').value.replace(/\/$/, '');
+
+let scanData   = [];
+let calcOdds   = [];
+let calcLabels = [];
+
+// ── Scan ─────────────────────────────────────────────────────
+
+async function startScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = '⟳ Scanning…';
+  document.getElementById('matchList').innerHTML = loadingSkeleton(6);
+  document.getElementById('globalPill').className = 'status-pill pill-gray';
+  document.getElementById('globalPill').textContent = '…';
+
+  try {
+    const evRes = await fetch(`${PROXY()}?endpoint=events`);
+    if (!evRes.ok) throw new Error(`Events ${evRes.status}`);
+    const evData = await evRes.json();
+
+    if (!evData.matches.length) {
+      document.getElementById('matchList').innerHTML =
+        '<div class="empty-state"><div class="big">📭</div>Δεν βρέθηκαν αγώνες σήμερα</div>';
+      return;
+    }
+
+    // Φόρτωσε odds παράλληλα (max 4 ταυτόχρονα)
+    const matches = evData.matches;
+    const results = [];
+    const BATCH   = 4;
+    for (let i = 0; i < matches.length; i += BATCH) {
+      const batch = matches.slice(i, i + BATCH);
+      const batchRes = await Promise.all(
+        batch.map(m =>
+          fetch(`${PROXY()}?endpoint=odds&rid=${m.rid}`)
+            .then(r => r.json())
+            .then(d => ({ ...m, ...d }))
+            .catch(() => ({ ...m, error: true }))
+        )
+      );
+      results.push(...batchRes);
+    }
+
+    scanData = results;
+    renderMatches(results);
+    updateGlobalPill(results);
+    document.getElementById('lastScan').textContent =
+      'Τελευταίο scan: ' + new Date().toLocaleTimeString('el-GR', {hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) {
+    document.getElementById('matchList').innerHTML =
+      `<div class="empty-state"><div class="big">⚠️</div>Σφάλμα: ${e.message}<br><small style="color:var(--text3)">Έλεγξε ότι ο proxy τρέχει στο ${PROXY()}</small></div>`;
+    showToast('Σφάλμα σύνδεσης με proxy', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '⟳ Scan';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+
+function renderMatches(data) {
+  const filter     = document.getElementById('cfgFilter').value;
+  const eeepaOnly  = document.getElementById('cfgEeepaOnly').checked;
+
+  // Group by league
+  const leagues = {};
+  for (const m of data) {
+    if (!leagues[m.league]) leagues[m.league] = [];
+    leagues[m.league].push(m);
+  }
+
+  let html = '';
+  let totalCards = 0;
+
+  for (const [league, matches] of Object.entries(leagues)) {
+    let leagueHtml = '';
+    for (const m of matches) {
+      const card = renderMatchCard(m, filter, eeepaOnly);
+      if (card) { leagueHtml += card; totalCards++; }
+    }
+    if (leagueHtml) {
+      html += `<div class="league-group">
+        <div class="league-header">${escHtml(league)}</div>
+        ${leagueHtml}
+      </div>`;
+    }
+  }
+
+  if (!totalCards) {
+    html = `<div class="empty-state"><div class="big">🔍</div>Δεν βρέθηκαν ευκαιρίες με τα τρέχοντα φίλτρα</div>`;
+  }
+
+  document.getElementById('matchList').innerHTML = html;
+}
+
+function renderMatchCard(m, filter, eeepaOnly) {
+  if (m.error) return null;
+
+  const analysis = m.analysis || {};
+  const combos   = analysis.combos || [];
+  const bestOdds = analysis.best_odds || {};
+  const books    = eeepaOnly ? (m.eeepa_books || {}) : (m.all_books || m.eeepa_books || {});
+
+  // Φίλτρο
+  const bestStatus = combos[0]?.status || 'NO_EDGE';
+  if (filter === 'dutch_multi' && !combos.some(c => c.status === 'DUTCH_MULTI')) return null;
+  if (filter === 'dutch'       && !combos.some(c => c.status.startsWith('DUTCH'))) return null;
+
+  const hasDutchMulti = combos.some(c => c.status === 'DUTCH_MULTI');
+  const topPill = hasDutchMulti
+    ? '<span class="status-pill pill-green">✓ DUTCH MULTI</span>'
+    : combos.some(c => c.status === 'DUTCH_SAME')
+    ? '<span class="status-pill pill-amber">⚡ DUTCH SAME</span>'
+    : '<span class="status-pill pill-gray">—</span>';
+
+  const rid = m.rid;
+
+  // Best odds cells
+  const outcomeLabels = { H: 'Νίκη Γηπεδούχου', X: 'Ισοπαλία', A: 'Νίκη Φιλοξενούμενου' };
+  let bestCells = '';
+  for (const [o, lbl] of Object.entries(outcomeLabels)) {
+    const d = bestOdds[o];
+    bestCells += `<div class="best-odd-cell">
+      <div class="outcome">${lbl}</div>
+      <div class="odd-val">${d ? d.odds.toFixed(2) : '—'}</div>
+      <div class="book-name">${d ? escHtml(d.book) : '—'}</div>
+    </div>`;
+  }
+
+  // Combos
+  let combosHtml = '';
+  for (const c of combos) {
+    const statusCls = c.status === 'DUTCH_MULTI' ? 'pill-green' :
+                      c.status === 'DUTCH_SAME'  ? 'pill-amber' : 'pill-gray';
+    const statusLbl = c.status === 'DUTCH_MULTI' ? 'MULTI' :
+                      c.status === 'DUTCH_SAME'  ? 'SAME' : 'NO EDGE';
+    const o1 = c.outcomes[0], o2 = c.outcomes[1];
+    const bookStr = c.books[0] === c.books[1]
+      ? escHtml(c.books[0])
+      : `${escHtml(c.books[0])} + ${escHtml(c.books[1])}`;
+    const oddsStr = `${c.odds[0].toFixed(2)} / ${c.odds[1].toFixed(2)}`;
+    combosHtml += `<div class="combo-row">
+      <div class="combo-outcomes">${o1} + ${o2}</div>
+      <div class="combo-books">${bookStr}<br><small style="color:var(--text3)">${oddsStr}</small></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="status-pill ${statusCls}" style="font-size:10px">${statusLbl}</span>
+        <span class="combo-implied">${c.implied_pct.toFixed(1)}%</span>
+        <span class="combo-edge">+${c.edge_pct.toFixed(1)}%</span>
+        <button class="combo-calc-btn"
+          onclick="openCalc('${rid}','${m.home}','${m.away}','${o1}','${o2}',
+            ${c.odds[0]},${c.odds[1]},'${c.books[0]}','${c.books[1]}')">
+          Calc →
+        </button>
+      </div>
+    </div>`;
+  }
+
+  // ΕΕΕΠ books table
+  const eeepaBooks = m.eeepa_books || {};
+  let booksHtml = '';
+  for (const [bk, od] of Object.entries(eeepaBooks)) {
+    booksHtml += `<div class="book-item eeepa-book">
+      <span class="bname">${escHtml(bk)}</span>
+      <span class="bodds">${od.H.toFixed(2)} / ${od.X.toFixed(2)} / ${od.A.toFixed(2)}</span>
+    </div>`;
+  }
+
+  return `<div class="match-card ${hasDutchMulti?'has-dutch':''}" id="card-${rid}">
+    <div class="match-header" onclick="toggleCard('${rid}')">
+      <div>
+        <div class="match-teams">${escHtml(m.home)} <span style="color:var(--text3)">vs</span> ${escHtml(m.away)}</div>
+        <div class="match-meta">${m.all_books_count || '?'} books · ${Object.keys(eeepaBooks).length} ΕΕΕΠ</div>
+      </div>
+      <div class="match-right">
+        ${topPill}
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="match-detail">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Best odds ΕΕΕΠ</div>
+      <div class="best-odds-row">${bestCells}</div>
+      <div class="combos-title">Συνδυασμοί</div>
+      ${combosHtml || '<div style="color:var(--text3);font-size:12px">Δεν βρέθηκαν combos</div>'}
+      ${booksHtml ? `<div style="font-size:11px;color:var(--text3);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px">ΕΕΕΠ books</div>
+      <div class="books-grid">${booksHtml}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleCard(rid) {
+  const card = document.getElementById(`card-${rid}`);
+  card.classList.toggle('open');
+}
+
+// ── Calculator ────────────────────────────────────────────────
+
+function openCalc(rid, home, away, o1, o2, odds1, odds2, book1, book2) {
+  const panel = document.getElementById('calcPanel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  document.getElementById('calcMatchLabel').textContent =
+    `${home} vs ${away} — ${o1}+${o2}`;
+
+  calcOdds   = [odds1, odds2];
+  calcLabels = [
+    { outcome: o1, book: book1, odds: odds1 },
+    { outcome: o2, book: book2, odds: odds2 },
+  ];
+
+  const stake = parseFloat(document.getElementById('cfgStake').value) || 50;
+  document.getElementById('calcTotalStake').value = stake;
+
+  renderCalcLegs();
+  recalc();
+}
+
+function renderCalcLegs() {
+  let html = `<div style="display:grid;grid-template-columns:80px 1fr 80px 80px;gap:6px;margin-bottom:4px;">
+    <div style="font-size:11px;color:var(--text3)">Outcome</div>
+    <div style="font-size:11px;color:var(--text3)">Book</div>
+    <div style="font-size:11px;color:var(--text3)">Απόδοση</div>
+    <div style="font-size:11px;color:var(--text3)">Stake</div>
+  </div>`;
+  for (let i = 0; i < calcLabels.length; i++) {
+    const l = calcLabels[i];
+    html += `<div class="calc-leg">
+      <div style="font-size:14px;font-weight:600;color:var(--text)">${l.outcome}</div>
+      <div style="font-size:12px;color:var(--text2)">${escHtml(l.book)}</div>
+      <input type="number" id="calcOdds${i}" value="${l.odds.toFixed(2)}" step="0.01" min="1.01" oninput="recalc()">
+      <div class="stake-out" id="calcStake${i}">—</div>
+    </div>`;
+  }
+  document.getElementById('calcLegs').innerHTML = html;
+}
+
+function recalc() {
+  const total = parseFloat(document.getElementById('calcTotalStake').value) || 0;
+  const n     = calcLabels.length;
+
+  const odds = [];
+  for (let i = 0; i < n; i++) {
+    const v = parseFloat(document.getElementById(`calcOdds${i}`)?.value) || 0;
+    odds.push(v);
+  }
+
+  if (odds.some(o => o <= 1) || total <= 0) return;
+
+  const implied = odds.map(o => 1 / o);
+  const sumImpl = implied.reduce((a, b) => a + b, 0);
+  const stakes  = implied.map(ip => (ip / sumImpl) * total);
+  const returns = stakes.map((s, i) => s * odds[i]);
+  const nets    = returns.map(r => r - total);
+
+  for (let i = 0; i < n; i++) {
+    const el = document.getElementById(`calcStake${i}`);
+    if (el) el.textContent = `€${stakes[i].toFixed(2)}`;
+  }
+
+  const minNet = Math.min(...nets);
+  const maxNet = Math.max(...nets);
+  const isGuar = minNet > -0.01;
+  const impliedPct = (sumImpl * 100).toFixed(2);
+
+  document.getElementById('calcSummary').innerHTML = `
+    <div class="calc-metric">
+      <div class="cm-label">Implied</div>
+      <div class="cm-val" style="font-size:15px">${impliedPct}%</div>
+    </div>
+    <div class="calc-metric">
+      <div class="cm-label">Χειρότερο</div>
+      <div class="cm-val" style="color:${minNet>=-0.01?'var(--green)':'var(--red)'}">
+        ${minNet>=0?'+':''}€${minNet.toFixed(2)}
+      </div>
+    </div>
+    <div class="calc-metric">
+      <div class="cm-label">Καλύτερο</div>
+      <div class="cm-val" style="color:var(--green)">+€${maxNet.toFixed(2)}</div>
+    </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function updateGlobalPill(data) {
+  const dutchMultiCount = data.filter(m =>
+    m.analysis?.combos?.some(c => c.status === 'DUTCH_MULTI')
+  ).length;
+  const pill = document.getElementById('globalPill');
+  if (dutchMultiCount > 0) {
+    pill.className = 'status-pill pill-green';
+    pill.textContent = `${dutchMultiCount} DUTCH MULTI`;
+  } else {
+    pill.className = 'status-pill pill-gray';
+    pill.textContent = 'Χωρίς ευκαιρίες';
+  }
+}
+
+function loadingSkeleton(n) {
+  return Array.from({length:n}, () =>
+    `<div class="loading-row">
+      <div class="loading-line" style="width:60%;margin-bottom:6px"></div>
+      <div class="loading-line" style="width:35%"></div>
+    </div>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+document.getElementById('cfgFilter').addEventListener('change', () => {
+  if (scanData.length) renderMatches(scanData);
+});
+document.getElementById('cfgEeepaOnly').addEventListener('change', () => {
+  if (scanData.length) renderMatches(scanData);
+});
+</script>
+</body>
+</html>
