@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Arb Scanner</title>
+<style>
+  :root {
+    --bg:#f5f5f5; --bg2:#fff; --bg3:#ebebeb;
+    --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.15);
+    --text:#1a1a1a; --text2:#666; --text3:#aaa;
+    --green:#16a34a; --green-bg:rgba(22,163,74,0.1);
+    --red:#dc2626;   --red-bg:rgba(220,38,38,0.1);
+    --amber:#d97706; --amber-bg:rgba(217,119,6,0.1);
+    --blue:#2563eb;  --blue-bg:rgba(37,99,235,0.1);
+    --radius:10px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    background:#e8e8e8;color:var(--text);font-size:14px;min-height:100vh;padding-bottom:4rem}
+  .page-wrap{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh}
+
+  header{padding:1rem 1rem 0.75rem;border-bottom:0.5px solid var(--border);
+    display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:10}
+  .logo{width:32px;height:32px;background:var(--blue-bg);border:0.5px solid var(--border2);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+  header h1{font-size:16px;font-weight:600}
+  header .sub{font-size:12px;color:var(--text2)}
+  .btn-scan{margin-left:auto;background:var(--blue-bg);color:var(--blue);
+    border:0.5px solid rgba(37,99,235,.4);padding:8px 14px;border-radius:var(--radius-sm);
+    font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+  .btn-scan:active{opacity:.7}
+  .btn-scan:disabled{opacity:.4;cursor:not-allowed}
+
+  .content{padding:0.75rem 1rem}
+  .card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);
+    padding:0.875rem 1rem;margin-bottom:0.625rem}
+  .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text2);margin-bottom:0.75rem}
+
+  .field-row{display:flex;align-items:center;gap:8px;margin-bottom:0.5rem}
+  .field-row:last-child{margin-bottom:0}
+  .field-row label{font-size:13px;color:var(--text2);min-width:110px;flex-shrink:0}
+  input[type=number],input[type=text],select{
+    background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
+    color:var(--text);font-size:13px;padding:7px 10px;outline:none;transition:border-color .15s;
+    -webkit-appearance:none}
+  input:focus,select:focus{border-color:var(--blue)}
+  .setup-inputs{display:flex;gap:8px;align-items:center}
+  .setup-inputs input{width:80px}
+  .unit{font-size:12px;color:var(--text2)}
+
+  /* ── Sport tabs ── */
+  .sport-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:0.625rem}
+  .sport-tab{padding:8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+    cursor:pointer;border:0.5px solid var(--border2);background:var(--bg2);
+    color:var(--text2);text-align:center;transition:all .15s}
+  .sport-tab.active{background:var(--blue-bg);color:var(--blue);border-color:rgba(37,99,235,.4)}
+
+  /* ── Book chips ── */
+  .books-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .book-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;
+    border-radius:20px;border:0.5px solid var(--border2);background:var(--bg3);
+    font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s;user-select:none}
+  .book-chip.active{background:var(--blue-bg);color:var(--blue);border-color:rgba(37,99,235,.4)}
+  .book-chip.all-chip.active{background:var(--green-bg);color:var(--green);border-color:rgba(22,163,74,.4)}
+  .book-chip.sharp-chip.active{background:var(--amber-bg);color:var(--amber);border-color:rgba(217,119,6,.4)}
+  .book-chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+  /* ── League / match ── */
+  .league-header{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--text3);padding:8px 0 6px;border-bottom:0.5px solid var(--border);margin-bottom:6px}
+  .match-card{background:var(--bg2);border:0.5px solid var(--border);
+    border-radius:var(--radius);margin-bottom:6px;overflow:hidden}
+  .match-card.has-arb{border-color:rgba(22,163,74,.4)}
+  .match-card.has-value{border-color:rgba(217,119,6,.4)}
+  .match-header{display:flex;align-items:center;justify-content:space-between;
+    padding:12px 14px;cursor:pointer}
+  .match-header:active{background:var(--bg3)}
+  .match-teams{font-size:14px;font-weight:600}
+  .match-meta{font-size:12px;color:var(--text2);margin-top:2px}
+  .match-right{display:flex;align-items:center;gap:8px}
+  .chevron{font-size:11px;color:var(--text3);transition:transform .2s}
+  .match-card.open .chevron{transform:rotate(180deg)}
+  .match-detail{display:none;padding:0 14px 14px;border-top:0.5px solid var(--border)}
+  .match-card.open .match-detail{display:block}
+
+  /* ── Status badges (ακριβώς από index.html) ── */
+  .status-badge{display:flex;align-items:center;gap:8px;padding:10px 14px;
+    border-radius:var(--radius);font-size:13px;font-weight:500;margin-bottom:0.625rem}
+  .status-badge.arb{background:var(--green-bg);color:var(--green);border:0.5px solid rgba(22,163,74,.3)}
+  .status-badge.partial{background:var(--amber-bg);color:var(--amber);border:0.5px solid rgba(217,119,6,.3)}
+  .status-badge.noarb{background:var(--red-bg);color:var(--red);border:0.5px solid rgba(220,38,38,.3)}
+  .status-badge.value{background:var(--amber-bg);color:var(--amber);border:0.5px solid rgba(217,119,6,.3)}
+
+  /* pill */
+  .pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600}
+  .pill-green{background:var(--green-bg);color:var(--green);border:0.5px solid rgba(22,163,74,.3)}
+  .pill-amber{background:var(--amber-bg);color:var(--amber);border:0.5px solid rgba(217,119,6,.3)}
+  .pill-red  {background:var(--red-bg);  color:var(--red);  border:0.5px solid rgba(220,38,38,.3)}
+  .pill-gray {background:var(--bg3);color:var(--text2);border:0.5px solid var(--border2)}
+  .pill-blue {background:var(--blue-bg);color:var(--blue);border:0.5px solid rgba(37,99,235,.3)}
+
+  /* ── Metrics (ακριβώς από index.html) ── */
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 8px}
+  .metric-card{background:var(--bg2);border:0.5px solid var(--border);
+    border-radius:var(--radius);padding:0.75rem}
+  .metric-card .mlabel{font-size:11px;color:var(--text2);margin-bottom:4px}
+  .metric-card .mvalue{font-size:22px;font-weight:600}
+  .metric-card.green{border-color:rgba(22,163,74,.3);background:var(--green-bg)}
+  .metric-card.green .mvalue{color:var(--green)}
+  .metric-card.red{border-color:rgba(220,38,38,.3);background:var(--red-bg)}
+  .metric-card.red .mvalue{color:var(--red)}
+  .metric-card.amber{border-color:rgba(217,119,6,.3);background:var(--amber-bg)}
+  .metric-card.amber .mvalue{color:var(--amber)}
+
+  /* ── Legs (ακριβώς από index.html) ── */
+  .legs-header{display:grid;grid-template-columns:1fr 80px 70px;gap:6px;margin:10px 0 4px}
+  .legs-header span{font-size:11px;color:var(--text3);font-weight:500;
+    text-transform:uppercase;letter-spacing:.04em;padding:0 2px}
+  .leg-row{display:grid;grid-template-columns:1fr 80px 70px;gap:6px;
+    align-items:center;margin-bottom:4px}
+  .leg-left{display:flex;flex-direction:column;gap:3px}
+  .leg-outcome{font-size:13px;font-weight:600;color:var(--text)}
+  .leg-book{font-size:11px;color:var(--blue)}
+  .leg-sharp{font-size:10px;color:var(--text3)}
+  .leg-odds-val{font-size:15px;font-weight:700;text-align:center;
+    background:var(--bg3);border-radius:var(--radius-sm);padding:6px 4px;color:var(--text)}
+  .leg-odds-val.value-odds{background:var(--amber-bg);color:var(--amber)}
+  .leg-stake-val{font-size:13px;font-weight:600;text-align:right;padding-right:4px;color:var(--text2)}
+  .leg-stake-val.kl-active{color:var(--amber)}
+
+  /* ── KL toggle (ακριβώς από index.html) ── */
+  .kl-toggle-row{display:flex;align-items:center;justify-content:space-between;
+    padding:5px 2px 8px;border-top:0.5px solid var(--border);margin-top:2px}
+  .kl-label{font-size:13px;color:var(--text)}
+  .kl-sub{font-size:11px;color:var(--text2);margin-top:1px}
+  .toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0;margin-left:10px}
+  .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-track{position:absolute;inset:0;background:var(--bg3);
+    border:0.5px solid var(--border2);border-radius:11px;cursor:pointer;transition:background .2s}
+  .toggle-track::after{content:'';position:absolute;width:16px;height:16px;
+    background:var(--text2);border-radius:50%;top:2px;left:2px;transition:transform .2s,background .2s}
+  .toggle-switch input:checked+.toggle-track{background:var(--amber-bg);border-color:var(--amber)}
+  .toggle-switch input:checked+.toggle-track::after{transform:translateX(18px);background:var(--amber)}
+
+  /* ── Results table (ακριβώς από index.html) ── */
+  .results-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  .results-table th{text-align:left;color:var(--text3);font-weight:500;padding:4px 6px;
+    border-bottom:0.5px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .results-table td{padding:7px 6px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+  .results-table tr:last-child td{border-bottom:none}
+  .net-pos{color:var(--green);font-weight:600}
+  .net-neg{color:var(--red)}
+  .net-warn{color:var(--amber);font-weight:600}
+  .type-pill{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500}
+  .type-auto{background:var(--bg3);color:var(--text2)}
+  .type-kl{background:var(--amber-bg);color:var(--amber)}
+  .footnote{font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5}
+
+  /* ── Sharp reference section ── */
+  .sharp-row{display:flex;gap:8px;margin:8px 0;padding:8px 10px;
+    background:var(--amber-bg);border:0.5px solid rgba(217,119,6,.2);
+    border-radius:var(--radius-sm)}
+  .sharp-item{flex:1;text-align:center}
+  .sharp-item .sl{font-size:10px;color:var(--amber);font-weight:600;
+    text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+  .sharp-item .sv{font-size:14px;font-weight:700;color:var(--text)}
+  .sharp-item .sb{font-size:10px;color:var(--text2)}
+
+  /* loading / empty */
+  .loading-card{background:var(--bg2);border:0.5px solid var(--border);
+    border-radius:var(--radius);padding:14px;margin-bottom:6px;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.9}}
+  .loading-line{height:13px;background:var(--bg3);border-radius:4px}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+  .empty-state .big{font-size:28px;margin-bottom:8px}
+
+  /* toast (ακριβώς από index.html) */
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);
+    padding:10px 18px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;
+    pointer-events:none;z-index:200;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.ok{border-color:rgba(22,163,74,.5);color:var(--green)}
+  .toast.err{border-color:rgba(220,38,38,.5);color:var(--red)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<header>
+  <div class="logo">⚡</div>
+  <div>
+    <h1>Arb Scanner</h1>
+    <div class="sub" id="lastScan">Football · Basketball · Tennis</div>
+  </div>
+  <button class="btn-scan" id="scanBtn" onclick="startScan()">⟳ Scan</button>
+</header>
+
+<div class="content">
+
+<!-- SPORT TABS -->
+<div class="sport-tabs">
+  <div class="sport-tab active" id="tab-football"   onclick="setActiveSport('football')">⚽ Football</div>
+  <div class="sport-tab"        id="tab-basketball" onclick="setActiveSport('basketball')">🏀 Basketball</div>
+  <div class="sport-tab"        id="tab-tennis"     onclick="setActiveSport('tennis')">🎾 Tennis</div>
+</div>
+
+<!-- SETUP -->
+<div class="card">
+  <div class="card-title">Ρυθμίσεις</div>
+  <div class="field-row">
+    <label>Proxy URL</label>
+    <input type="text" id="proxyUrl"
+      value="https://zefksis.wasmer.app/wp-content/uploads/scanner/arb-proxy.php"
+      style="width:100%;font-size:11px">
+  </div>
+  <div class="field-row">
+    <label>Συνολικό ποντάρισμα</label>
+    <div class="setup-inputs">
+      <span class="unit">€</span>
+      <input type="number" id="totalStake" value="100" min="1" step="10" oninput="refreshAllCalcs()">
+    </div>
+  </div>
+  <div class="field-row">
+    <label>% γνωστής απώλειας</label>
+    <div class="setup-inputs">
+      <input type="number" id="lossPercent" value="20" min="1" max="99" step="1"
+        style="width:60px" oninput="refreshAllCalcs()">
+      <span class="unit">%</span>
+    </div>
+  </div>
+</div>
+
+<!-- BOOK FILTERS -->
+<div class="card">
+  <div class="card-title">Books</div>
+  <div class="books-grid" id="booksGrid"></div>
+</div>
+
+<!-- MATCH LIST -->
+<div id="matchList"></div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const EEEPA_BOOKS = [
+  'stoiximan','novibet','betsson','bwin','bet365',
+  'fonbet','interwetten','efbet','efbet.net',
+  'sportingbet','vistabet','winmasters','netbet'
+];
+const SHARP_BOOKS = ['pinnacle','betfair','ps3838'];
+
+const BOOK_LABELS = {
+  'stoiximan':'Stoiximan','novibet':'Novibet','betsson':'Betsson',
+  'bwin':'Bwin','bet365':'Bet365','fonbet':'Fonbet',
+  'interwetten':'Interwetten','efbet':'Efbet','efbet.net':'Efbet.net',
+  'sportingbet':'Sportingbet','vistabet':'Vistabet','winmasters':'Winmasters',
+  'netbet':'Netbet','pinnacle':'Pinnacle','betfair':'Betfair','ps3838':'SBO'
+};
+
+const PROXY      = () => document.getElementById('proxyUrl').value.trim();
+const getTotal   = () => parseFloat(document.getElementById('totalStake').value) || 0;
+const getLossP   = () => (parseFloat(document.getElementById('lossPercent').value) || 20) / 100;
+
+let activeSport  = 'football';
+let scanData     = [];
+let klState      = {};
+let activeEeepa  = new Set(EEEPA_BOOKS);
+let activeSharp  = new Set(SHARP_BOOKS);
+
+// ── Sport tabs ────────────────────────────────────────────────
+function setActiveSport(sport) {
+  activeSport = sport;
+  ['football','basketball','tennis'].forEach(s => {
+    document.getElementById(`tab-${s}`).classList.toggle('active', s === sport);
+  });
+  scanData = []; klState = {};
+  document.getElementById('matchList').innerHTML = '';
+  document.getElementById('lastScan').textContent =
+    sport.charAt(0).toUpperCase() + sport.slice(1) + ' — πάτα Scan';
+}
+
+// ── Book filter UI ────────────────────────────────────────────
+function buildBookChips() {
+  const grid = document.getElementById('booksGrid');
+  grid.innerHTML = '';
+
+  // All chip
+  const allChip = document.createElement('div');
+  allChip.className = 'book-chip all-chip' + (activeEeepa.size === EEEPA_BOOKS.length ? ' active' : '');
+  allChip.innerHTML = '<span class="dot"></span>Όλα ΕΕΕΠ';
+  allChip.onclick = toggleAll;
+  grid.appendChild(allChip);
+
+  // ΕΕΕΠ chips
+  for (const book of EEEPA_BOOKS) {
+    const chip = document.createElement('div');
+    chip.className = 'book-chip' + (activeEeepa.has(book) ? ' active' : '');
+    chip.id = `chip-${book}`;
+    chip.innerHTML = `<span class="dot"></span>${BOOK_LABELS[book]||book}`;
+    chip.onclick = () => toggleBook(book);
+    grid.appendChild(chip);
+  }
+
+  // Sharp separator
+  const sep = document.createElement('div');
+  sep.style.cssText = 'width:100%;font-size:10px;color:var(--text3);margin:4px 0 2px;text-transform:uppercase;letter-spacing:.05em';
+  sep.textContent = 'Sharp reference';
+  grid.appendChild(sep);
+
+  // Sharp chips
+  for (const book of SHARP_BOOKS) {
+    const chip = document.createElement('div');
+    chip.className = 'book-chip sharp-chip' + (activeSharp.has(book) ? ' active' : '');
+    chip.id = `chip-${book}`;
+    chip.innerHTML = `<span class="dot"></span>${BOOK_LABELS[book]||book}`;
+    chip.onclick = () => toggleSharp(book);
+    grid.appendChild(chip);
+  }
+}
+
+function toggleAll() {
+  if (activeEeepa.size === EEEPA_BOOKS.length) activeEeepa.clear();
+  else EEEPA_BOOKS.forEach(b => activeEeepa.add(b));
+  buildBookChips();
+  if (scanData.length) renderAll();
+}
+function toggleBook(book) {
+  activeEeepa.has(book) ? activeEeepa.delete(book) : activeEeepa.add(book);
+  buildBookChips();
+  if (scanData.length) renderAll();
+}
+function toggleSharp(book) {
+  activeSharp.has(book) ? activeSharp.delete(book) : activeSharp.add(book);
+  buildBookChips();
+  if (scanData.length) renderAll();
+}
+
+// ── Scan ──────────────────────────────────────────────────────
+async function startScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = '⟳ …';
+  document.getElementById('matchList').innerHTML = skeleton(5);
+  scanData = []; klState = {};
+
+  try {
+    const evRes = await fetch(`${PROXY()}?endpoint=events&sport=${activeSport}`);
+    if (!evRes.ok) throw new Error(`HTTP ${evRes.status}`);
+    const ev = await evRes.json();
+
+    if (!ev.matches?.length) {
+      document.getElementById('matchList').innerHTML =
+        '<div class="empty-state"><div class="big">📭</div>Δεν βρέθηκαν αγώνες</div>';
+      return;
+    }
+
+    const results = [];
+    for (let i = 0; i < ev.matches.length; i += 4) {
+      const batch = ev.matches.slice(i, i+4);
+      const res = await Promise.all(batch.map(m =>
+        fetch(`${PROXY()}?endpoint=odds&rid=${m.rid}&sport=${activeSport}`)
+          .then(r => r.json())
+          .then(d => ({...m, ...d}))
+          .catch(() => ({...m, error:true}))
+      ));
+      results.push(...res);
+    }
+
+    scanData = results;
+    for (const m of results) {
+      const n = (m.outcomes||['H','X','A']).length;
+      klState[m.rid] = Array(n).fill(false);
+    }
+
+    renderAll();
+    document.getElementById('lastScan').textContent =
+      activeSport.charAt(0).toUpperCase()+activeSport.slice(1)+
+      ' · Scan: '+new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) {
+    document.getElementById('matchList').innerHTML =
+      `<div class="empty-state"><div class="big">⚠️</div>${e.message}</div>`;
+    toast(e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '⟳ Scan';
+  }
+}
+
+// ── Render all ────────────────────────────────────────────────
+function renderAll() {
+  const open = new Set([...document.querySelectorAll('.match-card.open')].map(el=>el.dataset.rid));
+  const leagues = {};
+  for (const m of scanData) {
+    if (!leagues[m.league]) leagues[m.league] = [];
+    leagues[m.league].push(m);
+  }
+  let html = '';
+  for (const [league, matches] of Object.entries(leagues)) {
+    html += `<div class="league-header">${esc(league)}</div>`;
+    for (const m of matches) html += renderCard(m);
+  }
+  document.getElementById('matchList').innerHTML = html || '<div class="empty-state"><div class="big">🔍</div>Κανένα αποτέλεσμα</div>';
+  for (const rid of open) document.getElementById(`card-${rid}`)?.classList.add('open');
+}
+
+// ── Render card ───────────────────────────────────────────────
+function renderCard(m) {
+  if (m.error) return '';
+
+  const outcomes  = m.outcomes || ['H','X','A'];
+  const outLabels = {H:'1', X:'X', A:'2'};
+  const allEeepa  = m.eeepa_books || {};
+  const allSharp  = m.sharp_books || {};
+
+  // Φιλτράρισμα active books
+  const filtEeepa = Object.fromEntries(Object.entries(allEeepa).filter(([k])=>activeEeepa.has(k)));
+  const filtSharp = Object.fromEntries(Object.entries(allSharp).filter(([k])=>activeSharp.has(k)));
+
+  // Best odds ανά outcome — από ΕΕΕΠ + Sharp μαζί
+  const bestE = {}, bestS = {}, bestAll = {};
+  for (const o of outcomes) {
+    // Best ΕΕΕΠ (για reference)
+    bestE[o] = {odds:0, book:'—', isSharp:false};
+    for (const [bk, od] of Object.entries(filtEeepa))
+      if ((od[o]||0) > bestE[o].odds) bestE[o] = {odds:od[o], book:bk, isSharp:false};
+    // Best Sharp (για reference)
+    bestS[o] = {odds:0, book:'—', isSharp:true};
+    for (const [bk, od] of Object.entries(filtSharp))
+      if ((od[o]||0) > bestS[o].odds) bestS[o] = {odds:od[o], book:bk, isSharp:true};
+    // Best overall (ΕΕΕΠ + Sharp) — αυτό χρησιμοποιείται στον υπολογισμό
+    bestAll[o] = bestE[o].odds >= bestS[o].odds ? bestE[o] : bestS[o];
+  }
+
+  const valid    = outcomes.every(o => bestE[o].odds > 1);
+  const kl       = klState[m.rid] || Array(outcomes.length).fill(false);
+  const total    = getTotal();
+  const lp       = getLossP();
+  const oddsArr  = outcomes.map(o => bestAll[o].odds);
+
+  // Stake calculation (ίδια λογική με index.html)
+  const fixedArr  = oddsArr.map((o,i) => kl[i] && o>1 ? (total*(1-lp))/o : null);
+  const fixedSum  = fixedArr.reduce((a,v) => a+(v!==null?v:0), 0);
+  const implArr   = oddsArr.map(o => o>1 ? 1/o : 0);
+  const freeImpl  = implArr.reduce((a,v,i) => a+(fixedArr[i]===null?v:0), 0);
+  const freeTotal = Math.max(0, total-fixedSum);
+  const stakes    = fixedArr.map((v,i) =>
+    v!==null ? v : (freeImpl>0 ? (implArr[i]/freeImpl)*freeTotal : 0));
+  const sumImpl   = implArr.reduce((a,b)=>a+b, 0);
+  const totalSt   = stakes.reduce((a,b)=>a+b, 0);
+  const returns   = stakes.map((s,i)=>s*oddsArr[i]);
+  const nets      = returns.map(r=>r-totalSt);
+  const minNet    = valid ? Math.min(...nets) : 0;
+  const maxNet    = valid ? Math.max(...nets) : 0;
+  const isArb     = valid && minNet > -0.01;
+  const klCount   = kl.filter(Boolean).length;
+  const bookCount = Object.keys(filtEeepa).length;
+  const multiBook = valid && new Set(outcomes.map(o=>bestAll[o].book)).size > 1;
+
+  // Value detection (ΕΕΕΠ odds > sharp odds)
+  // Value = ΕΕΕΠ καλύτερο από Sharp (μόνο αν το best δεν είναι ήδη Sharp)
+  const valueLegs = valid ? outcomes.filter(o =>
+    !bestAll[o].isSharp && bestS[o].odds > 1 && bestE[o].odds > bestS[o].odds
+  ) : [];
+  const hasValue = valueLegs.length > 0;
+
+  // Sharp implied
+  const sharpImpl = outcomes.every(o=>bestS[o].odds>1)
+    ? outcomes.reduce((a,o)=>a+1/bestS[o].odds, 0)*100 : null;
+
+  // Header pill
+  let headerPill;
+  if (!valid || bookCount===0) {
+    headerPill = `<span class="pill pill-gray">${bookCount===0?'Κανένα book':'—'}</span>`;
+  } else if (isArb && multiBook) {
+    headerPill = '<span class="pill pill-green">✓ Sure Bet</span>';
+  } else if (isArb) {
+    headerPill = '<span class="pill pill-amber">✓ Same Book</span>';
+  } else if (hasValue) {
+    headerPill = `<span class="pill pill-amber">⚡ Value ×${valueLegs.length}</span>`;
+  } else if (klCount>0) {
+    headerPill = '<span class="pill pill-amber">⚡ ΕΝ ΓΝΩΣΕΙ</span>';
+  } else {
+    headerPill = `<span class="pill pill-red">${(sumImpl*100).toFixed(1)}%</span>`;
+  }
+
+  // ── Legs HTML ──
+  let legsHtml = `<div class="legs-header">
+    <span>Αποτέλεσμα / Book</span><span>Απόδοση</span><span>Ποντ.</span>
+  </div>`;
+
+  outcomes.forEach((o, i) => {
+    const best   = bestAll[o];
+    const eOdds  = bestE[o].odds;
+    const sOdds  = bestS[o].odds;
+    const isSharp= best.isSharp;
+    const isVal  = !isSharp && sOdds>1 && eOdds>sOdds;
+    const sc     = kl[i] ? 'kl-active' : '';
+    const oc     = isSharp ? 'value-odds' : isVal ? 'value-odds' : '';
+    const st     = valid ? `€${stakes[i].toFixed(2)}` : '—';
+    const klAmt  = kl[i] ? `€${stakes[i].toFixed(2)}` : '';
+    const sharpBadge = isSharp ? '<span class="pill pill-amber" style="font-size:9px;padding:1px 5px">SHARP</span>' : '';
+    const valBadge   = isVal   ? '<span class="pill pill-amber" style="font-size:9px;padding:1px 5px">VALUE</span>' : '';
+
+    legsHtml += `
+    <div class="leg-row">
+      <div class="leg-left">
+        <div class="leg-outcome">${outLabels[o]||o} <span style="font-weight:400;color:var(--text2);font-size:11px">${o}</span>
+          ${sharpBadge}${valBadge}
+        </div>
+        <div class="leg-book">${esc(best.book)}</div>
+        ${!isSharp && sOdds>1 ? `<div class="leg-sharp">Sharp ref: ${sOdds.toFixed(2)} @ ${esc(bestS[o].book)}</div>` : ''}
+        ${isSharp && eOdds>1  ? `<div class="leg-sharp">Best ΕΕΕΠ: ${eOdds.toFixed(2)} @ ${esc(bestE[o].book)}</div>` : ''}
+      </div>
+      <div class="leg-odds-val ${oc}">${best.odds>1 ? best.odds.toFixed(2) : '—'}</div>
+      <div class="leg-stake-val ${sc}">${st}</div>
+    </div>
+    <div class="kl-toggle-row">
+      <div>
+        <div class="kl-label">${outLabels[o]||o} — εν γνώσει</div>
+        <div class="kl-sub">-${Math.round(lp*100)}% αν κερδίσει</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${klAmt ? `<span style="font-size:12px;color:var(--amber)">${klAmt}</span>` : ''}
+        <label class="toggle-switch">
+          <input type="checkbox" ${kl[i]?'checked':''}
+            onchange="toggleKL('${m.rid}',${i},this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>`;
+  });
+
+  // ── Detail body ──
+  let detailBody = legsHtml;
+
+  if (valid) {
+    const mG = maxNet>=-0.01?'green':'red';
+    const mB = minNet>=-0.01?'green':klCount>0?'amber':'red';
+
+    detailBody += `<div class="metrics">
+      <div class="metric-card"><div class="mlabel">ΕΕΕΠ Implied</div>
+        <div class="mvalue" style="font-size:18px">${(sumImpl*100).toFixed(2)}%</div></div>
+      <div class="metric-card ${sharpImpl?'amber':''}">
+        <div class="mlabel">Sharp Implied</div>
+        <div class="mvalue" style="font-size:18px">${sharpImpl?sharpImpl.toFixed(2)+'%':'—'}</div></div>
+      <div class="metric-card ${mG}"><div class="mlabel">Καλύτερο</div>
+        <div class="mvalue">${maxNet>=0?'+':''}€${maxNet.toFixed(2)}</div></div>
+      <div class="metric-card ${mB}"><div class="mlabel">Χειρότερο</div>
+        <div class="mvalue">${minNet>=0?'+':''}€${minNet.toFixed(2)}</div></div>
+    </div>`;
+
+    // Badge
+    let badge;
+    if (bookCount===1) {
+      badge = `<div class="status-badge partial">ℹ Single book — χρησιμοποίησε εν γνώσει</div>`;
+    } else if (isArb && multiBook) {
+      badge = `<div class="status-badge arb">✓ Sure Bet — κέρδος εγγυημένο</div>`;
+    } else if (isArb) {
+      badge = `<div class="status-badge partial">⚡ Arb same book</div>`;
+    } else if (hasValue) {
+      badge = `<div class="status-badge value">⚡ Value — ΕΕΕΠ καλύτερα από sharp σε: ${valueLegs.join(', ')}</div>`;
+    } else if (klCount>0) {
+      badge = `<div class="status-badge partial">⚡ Ελεγχόμενη έκθεση</div>`;
+    } else {
+      badge = `<div class="status-badge noarb">✕ Δεν υπάρχει arb</div>`;
+    }
+    detailBody += badge;
+
+    // Table
+    detailBody += `<table class="results-table"><thead><tr>
+      <th>Σημείο</th><th>Book</th><th>Απόδ.</th><th>Sharp</th><th>Ποντ.</th><th>Net P/L</th>
+    </tr></thead><tbody>`;
+    outcomes.forEach((o,i) => {
+      const nc   = kl[i]?'net-warn':nets[i]>=-0.01?'net-pos':'net-neg';
+      const bst  = bestAll[o];
+      const refO = bst.isSharp ? bestE[o].odds : bestS[o].odds;
+      const refB = bst.isSharp ? bestE[o].book : bestS[o].book;
+      const typeLbl = bst.isSharp
+        ? '<span class="type-pill type-kl">Sharp</span>'
+        : '<span class="type-pill type-auto">ΕΕΕΠ</span>';
+      detailBody += `<tr>
+        <td><strong>${outLabels[o]||o}</strong></td>
+        <td style="color:var(--text2);font-size:11px">${esc(bst.book)} ${typeLbl}</td>
+        <td style="font-weight:600;color:${bst.isSharp?'var(--amber)':'var(--text)'}">${bst.odds.toFixed(2)}</td>
+        <td style="color:var(--text3);font-size:11px">${refO>1?refO.toFixed(2)+' @ '+esc(refB):'—'}</td>
+        <td style="font-weight:600">€${stakes[i].toFixed(2)}</td>
+        <td class="${nc}">${nets[i]>=0?'+':''}€${nets[i].toFixed(2)}</td>
+      </tr>`;
+    });
+    detailBody += '</tbody></table>';
+
+    const books = [...new Set(outcomes.map(o=>bestE[o].book).filter(b=>b&&b!=='—'))];
+    detailBody += `<p class="footnote">${
+      isArb && multiBook ? `Multi-book: ${books.join(', ')}.` :
+      isArb ? 'Προσοχή: ίδιο book.' :
+      hasValue ? `Value legs: ${valueLegs.map(o=>o+' @ '+bestE[o].odds.toFixed(2)).join(', ')} vs sharp.` :
+      'Δεν υπάρχει arb με τα επιλεγμένα books.'
+    }</p>`;
+  }
+
+  const cardClass = isArb&&multiBook?'has-arb':hasValue?'has-value':'';
+  return `<div class="match-card ${cardClass}" id="card-${m.rid}" data-rid="${m.rid}">
+    <div class="match-header" onclick="toggleCard('${m.rid}')">
+      <div>
+        <div class="match-teams">${esc(m.home)} <span style="color:var(--text3)">vs</span> ${esc(m.away)}</div>
+        <div class="match-meta">${esc(m.league)} · ${m.all_books_count||'?'} books · ${bookCount} ΕΕΕΠ</div>
+      </div>
+      <div class="match-right">${headerPill}<span class="chevron">▾</span></div>
+    </div>
+    <div class="match-detail">${detailBody}</div>
+  </div>`;
+}
+
+// ── KL toggle ─────────────────────────────────────────────────
+function toggleKL(rid, idx, checked) {
+  if (!klState[rid]) klState[rid] = [];
+  klState[rid][idx] = checked;
+  const m = scanData.find(x=>x.rid===rid);
+  if (!m) return;
+  const card    = document.getElementById(`card-${rid}`);
+  const wasOpen = card?.classList.contains('open');
+  const tmp     = document.createElement('div');
+  tmp.innerHTML = renderCard(m);
+  const newCard = tmp.firstChild;
+  if (wasOpen) newCard.classList.add('open');
+  card.replaceWith(newCard);
+}
+
+function refreshAllCalcs() { if (scanData.length) renderAll(); }
+function toggleCard(rid)    { document.getElementById(`card-${rid}`)?.classList.toggle('open'); }
+
+function skeleton(n) {
+  return Array.from({length:n}, ()=>`<div class="loading-card">
+    <div class="loading-line" style="width:55%;margin-bottom:8px"></div>
+    <div class="loading-line" style="width:35%"></div>
+  </div>`).join('');
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg,type='ok') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast show ${type}`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// Init
+buildBookChips();
+</script>
+</body>
+</html>
